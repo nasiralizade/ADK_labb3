@@ -5,11 +5,9 @@
 #include <queue>
 #include <climits>
 #include <sstream>
-// // labb 3 del 3
+#include <list>
 
-/**
- * Representerar en kant i en graf
- */
+
 struct Edge {
     int source, sink, capacity, flow;
     std::shared_ptr<Edge> reverse;
@@ -19,74 +17,24 @@ struct Edge {
     }
 };
 
-using EdgePtr = std::shared_ptr<Edge>; // För att slippa skriva std::shared_ptr<Edge> hela tiden
+using EdgePtr = std::shared_ptr<Edge>;
 using EdgeList = std::vector<EdgePtr>;
-using Graph = std::array<EdgeList, 4001>; // En array av listor med edges (max 4000 noder)
-
-void readFlowAndSolve();
+using Graph = std::array<EdgeList, 10005>;
 
 void addEdge(Graph &graph, int source, int sink, int capacity);
 
 int calcMaxFlow(const Graph &graph, int s, int t);
 
-void printGraph(const Graph &graph, int number_of_vertices, int s, int t, int max_flow);
-
-int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-    readFlowAndSolve();
-    return 0;
-}
-
-/**
- * Läser in en graf och löser maxflödesproblemet
- */
-void readFlowAndSolve() {
-    // Antal noder, startnod, slutnod, antal kanter
-    int numberOfVertices, s, t, numberOfEdges;
-    Graph graph;
-    std::cin >> numberOfVertices >> s >> t >> numberOfEdges;
-    int u, v, c; // Källa, sänka, kapacitet
-    while (numberOfEdges--) {
-        std::cin >> u >> v >> c;
-        addEdge(graph, u, v, c);
-    }
-    int maxFlow = calcMaxFlow(graph, s, t);
-    printGraph(graph, numberOfVertices, s, t, maxFlow);
-}
-
-/**
- * Lägger till en kant i grafen med kapacitet capacity
- * @param graph
- * @param source
- * @param sink
- * @param capacity
- */
-void addEdge(Graph &graph, int source, int sink, int capacity) {
-    auto edge = std::make_shared<Edge>(source, sink, capacity);
-    auto reverse = std::make_shared<Edge>(sink, source, 0);
-    edge->reverse = reverse;
-    reverse->reverse = edge;
-    graph[source].push_back(edge);
-    graph[sink].push_back(reverse);
-}
-/**
- * Bredden-först-sökning i grafen för att hitta en väg från s till t (en typ av bfs)
- * @param graph
- * @param s källan
- * @param t sänkan
- * @param path en vektor som håller reda på vilka kanter som ingår i vägen
- * @return true om det finns en väg från s till t
- */
 bool bfs(const Graph &graph, int s, int t, std::vector<EdgePtr> &path) {
     std::queue<int> q;
     q.push(s);
-    std::fill(path.begin(), path.end(), nullptr);
-
+    //std::fill(path.begin(), path.end(), nullptr);
+    path.assign(graph.size(), nullptr);
     while (!q.empty()) {
         int current = q.front();
         q.pop();
-        for (auto &edge: graph[current]) { // Gå igenom alla kanter från noden
+        for (auto &edge: graph[current]) {
+            // Gå igenom alla kanter från noden
             if (path[edge->sink] == nullptr && edge->sink != s && edge->capacity > edge->flow) {
                 path[edge->sink] = edge; // Spara kanten
                 q.push(edge->sink); // Lägg till noden i kön
@@ -95,47 +43,135 @@ bool bfs(const Graph &graph, int s, int t, std::vector<EdgePtr> &path) {
     }
     return path[t] != nullptr;
 }
-/**
- * Beräknar maxflödet i en graf
- * @param graph
- * @param s källan
- * @param t sänkan
- * @return maxflödet
- */
+
 int calcMaxFlow(const Graph &graph, int s, int t) {
     int maxFlow = 0;
     std::vector<EdgePtr> path(graph.size(), nullptr);
 
-    while (bfs(graph, s, t, path)) { // Så länge det finns en väg från s till t
-        int flow = INT_MAX;
+    while (bfs(graph, s, t, path)) {
+        // Så länge det finns en väg från s till t
+        int flow_i = INT_MAX;
         for (auto edge = path[t]; edge != nullptr; edge = path[edge->source]) {
-            flow = std::min(flow, edge->capacity - edge->flow); // Hitta den minsta kapaciteten i vägen
+            flow_i = std::min(flow_i, edge->capacity - edge->flow);
         }
-        for (auto edge = path[t]; edge != nullptr; edge = path[edge->source]) { // Uppdatera flödet
-            edge->flow += flow;
-            edge->reverse->flow -= flow;
+        for (auto edge = path[t]; edge != nullptr; edge = path[edge->source]) {
+            edge->flow += flow_i;
+            edge->reverse->flow -= flow_i;
         }
-        maxFlow += flow;
+        maxFlow += flow_i;
     }
     return maxFlow;
 }
 
+void addEdge(Graph &graph, int source, int sink, int capacity) {
+    auto edge = std::make_shared<Edge>(source, sink, capacity);
+    auto reverse = std::make_shared<Edge>(sink, source, 0);
+    edge->reverse = reverse;
+    reverse->reverse = edge;
+    graph[source].push_back(edge);
+    graph[sink].push_back(reverse);
+}
 
+// steg
+class Biprep {
+private:
+    std::vector<std::list<int> > adjA;
+    std::vector<std::list<int> > adjB;
+    int x, y, e, numVertices;
 
-void printGraph(const Graph &graph, int number_of_vertices, int s, int t, int max_flow) {
-    std::cout << number_of_vertices << "\n" << s << " " << t << " " << max_flow << "\n";
+public:
+    Biprep() = default;
 
-    std::stringstream output; // Skapa en ström för att skriva ut kanterna
-    int numLines = 0;
-    for (auto &list: graph) {
-        for (auto &e: list) {
-            if (e->flow > 0) {
-                output << e->source << " " << e->sink << " " << e->flow << "\n";
-                numLines++;
+    void readBipartiteGraph();
+
+    void writeFlowGraph();
+
+    void readMaxFlowSolution();
+
+    void writeBipMatchSolution();
+
+    int num_vertices() const {
+        return numVertices;
+    }
+
+    Graph flowGraph;
+};
+
+void Biprep::readBipartiteGraph() {
+    std::cin >> x >> y >> e;
+    numVertices = x + y + 2;
+    adjA.resize(numVertices + 1);
+
+    for (int i = 0; i < e; ++i) {
+        // Läs in kanterna som tas emot från standard in och lägg till i adjA
+        int a, b;
+        std::cin >> a >> b;
+        adjA[a + 1].push_back(b + 1);
+    }
+
+    for (int i = 1; i <= x; ++i) {
+        // Lägg till kanter från source till vänster (source = 1)
+        adjA[1].push_back(i + 1);
+    }
+
+    for (int i = x + 1; i < numVertices - 1; ++i) {
+        // Lägg till kanter från höger till sink (sink = numVertices)
+        adjA[i + 1].push_back(numVertices);
+    }
+}
+
+void Biprep::writeFlowGraph() {
+    for (int i = 1; i <= numVertices; ++i) {
+        for (int j: adjA[i]) {
+            //addEdge(flowGraph, i, j, 1);
+            if (i < flowGraph.size() && j < flowGraph.size()) {
+                addEdge(flowGraph, i, j, 1);
+            } else {
+                std::cerr << "Index out of range: i = " << i << ", j = " << j << "\n";
             }
         }
     }
-    std::cout << numLines << "\n";
-    std::cout << output.str();
-    std::cout << std::flush;
+}
+
+void Biprep::readMaxFlowSolution() {
+    adjB.resize(numVertices + 1);
+
+    for (int u = 1; u <= numVertices; ++u) {
+        // Loop över noder i X
+        for (auto &edge: flowGraph[u]) {
+            if (edge->flow == 1 && edge->source != 1 && edge->sink != numVertices) {
+                adjB[u-1].push_back(edge->sink-1);
+            }
+        }
+    }
+}
+
+void Biprep::writeBipMatchSolution() {
+    std::cout << x << " " << y << "\n";
+    int matchCount = 0;
+    for (int i = 1; i <= x; ++i) {
+        matchCount += adjB[i].size();
+    }
+    std::cout << matchCount << "\n";
+
+    for (int i = 1; i <= x; ++i) {
+        for (int j: adjB[i]) {
+            std::cout << i << " " << j << "\n";
+        }
+    }
+}
+
+
+int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+
+    Biprep biprep;
+    biprep.readBipartiteGraph();
+    biprep.writeFlowGraph();
+    auto t = biprep.num_vertices();
+    int maxFlow = calcMaxFlow(biprep.flowGraph, 1, t);
+    biprep.readMaxFlowSolution();
+    biprep.writeBipMatchSolution();
+    return 0;
 }
