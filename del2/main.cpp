@@ -46,7 +46,7 @@ void readFlowAndSolve() {
     int numberOfVertices, s, t, numberOfEdges;
     Graph graph;
     std::cin >> numberOfVertices >> s >> t >> numberOfEdges;
-    int u, v, c; // Källa, sänka, kapacitet
+    int u, v, c; // Från, till, kapacitet
     while (numberOfEdges--) {
         std::cin >> u >> v >> c;
         addEdge(graph, u, v, c);
