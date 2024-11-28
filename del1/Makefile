@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O2
 LDFLAGS =
 
-TARGET = biprep
+TARGET = del1
 SRCS = main.cpp Biprep.cpp
 OBJS = $(SRCS:.cpp=.o)
 

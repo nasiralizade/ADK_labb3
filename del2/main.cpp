@@ -96,7 +96,7 @@ bool bfs(const Graph &graph, int s, int t, std::vector<EdgePtr> &path) {
     return path[t] != nullptr;
 }
 /**
- * Beräknar maxflödet i en graf
+ * Beräknar maxflödet i en graf med Edmonds-Karp algoritmen
  * @param graph
  * @param s källan
  * @param t sänkan
